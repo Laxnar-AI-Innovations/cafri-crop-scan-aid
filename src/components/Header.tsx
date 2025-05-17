@@ -34,7 +34,7 @@ const Header: React.FC<HeaderProps> = ({ title, showBack = false }) => {
         <img 
           src="/lovable-uploads/c8d32a6a-bea7-4a5f-bf2b-eb996a5d4cb8.png" 
           alt="LAXNAR AI INNOVATIONS" 
-          className="h-8 w-auto" 
+          className="h-12 w-auto max-w-[120px]" 
         />
       </div>
     </header>
