@@ -31,10 +31,13 @@ const HomeScreen: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header title={{ en: "CAFRI Crop Doctor", hi: "CAFRI क्रॉप डॉक्टर" }} />
+      <Header title={{ 
+        en: "CAFRI Crop Doctor", 
+        hi: "CAFRI क्रॉप डॉक्टर" 
+      }} />
       
       <div className="px-4 py-3">
-        <h1 className="text-xl font-bold text-cafri-purple-dark mb-6">
+        <h1 className="text-xl font-bold text-cafri-purple mb-6">
           {titles[language].welcome}
         </h1>
         

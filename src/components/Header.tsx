@@ -30,8 +30,12 @@ const Header: React.FC<HeaderProps> = ({ title, showBack = false }) => {
       <h1 className="text-xl font-semibold text-cafri-purple-dark flex-1">
         {title[language]}
       </h1>
-      <div className="w-8">
-        {/* Placeholder for right side icons if needed */}
+      <div className="flex items-center">
+        <img 
+          src="/lovable-uploads/c8d32a6a-bea7-4a5f-bf2b-eb996a5d4cb8.png" 
+          alt="LAXNAR AI INNOVATIONS" 
+          className="h-5"
+        />
       </div>
     </header>
   );
