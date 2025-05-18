@@ -1,0 +1,10 @@
+
+{
+  "appId": "com.cafri.cropscan",
+  "appName": "CAFRI Crop Doctor",
+  "webDir": "dist",
+  "server": {
+    "url": "https://6ec3c1c2-8902-4450-822b-924c20f4d474.lovableproject.com?forceHideBadge=true",
+    "cleartext": true
+  }
+}
