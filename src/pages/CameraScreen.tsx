@@ -33,6 +33,7 @@ const CameraScreen: React.FC = () => {
               <li>Focus on affected areas</li>
               <li>Include both healthy and affected parts</li>
               <li>Keep the camera steady</li>
+              <li>Images are analyzed using AI for disease detection</li>
             </ul>
           </div>
         </div>

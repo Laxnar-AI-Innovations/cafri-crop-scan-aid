@@ -1,11 +1,13 @@
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Camera } from 'lucide-react';
+import { Camera, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import { useAppContext } from '@/contexts/AppContext';
 import { DiagnosisResult } from '@/types';
 import { toast } from '@/components/ui/sonner';
+import { uploadImageForPrediction } from '@/services/predictionService';
+import { Button } from '@/components/ui/button';
 
 const CameraCapture: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -13,6 +15,7 @@ const CameraCapture: React.FC = () => {
   const [cameraActive, setCameraActive] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
   const [isFrontCamera, setIsFrontCamera] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { isOnline, addDiagnosis, addPendingImage } = useAppContext();
   const navigate = useNavigate();
 
@@ -38,11 +41,13 @@ const CameraCapture: React.FC = () => {
           stream = await navigator.mediaDevices.getUserMedia(constraints);
           videoRef.current.srcObject = stream;
           setCameraActive(true);
+          setError(null);
         }
       } catch (err) {
         console.error('Error accessing camera:', err);
         toast.error('Could not access camera. Please check permissions.');
         setCameraActive(false);
+        setError('Camera access denied. Please check permissions.');
       }
     };
 
@@ -83,24 +88,14 @@ const CameraCapture: React.FC = () => {
       const diagnosisId = uuidv4();
       
       if (isOnline) {
-        // Simulate API request
-        setTimeout(() => {
-          const mockResult: DiagnosisResult = {
-            count: 1,
-            detections: [
-              {
-                label: 'Wheat___Rust',
-                confidence: 0.87,
-                bbox: [canvas.width * 0.1, canvas.height * 0.2, canvas.width * 0.9, canvas.height * 0.8]
-              }
-            ],
-            inference_ms: 245
-          };
+        try {
+          // Send to real API and get actual results
+          const result = await uploadImageForPrediction(imageUri);
           
           const diagnosis = {
             id: diagnosisId,
             imageUri,
-            result: mockResult,
+            result,
             timestamp: Date.now(),
             location: {
               latitude: 25.4581,
@@ -111,8 +106,23 @@ const CameraCapture: React.FC = () => {
           
           addDiagnosis(diagnosis);
           navigate(`/result/${diagnosisId}`);
-          setIsCapturing(false);
-        }, 1500);
+        } catch (error) {
+          console.error('Error processing image:', error);
+          toast.error('Failed to analyze image. Please try again.');
+          
+          // Save the image to pending queue if API fails
+          addPendingImage(imageUri);
+          
+          const diagnosis = {
+            id: diagnosisId,
+            imageUri,
+            timestamp: Date.now(),
+            isProcessed: false
+          };
+          
+          addDiagnosis(diagnosis);
+          navigate('/history');
+        }
       } else {
         // Offline mode - queue the image
         addPendingImage(imageUri);
@@ -127,11 +137,11 @@ const CameraCapture: React.FC = () => {
         
         addDiagnosis(diagnosis);
         navigate('/history');
-        setIsCapturing(false);
       }
     } catch (error) {
       console.error('Error capturing image:', error);
       toast.error('Failed to capture image. Please try again.');
+    } finally {
       setIsCapturing(false);
     }
   };
@@ -140,10 +150,26 @@ const CameraCapture: React.FC = () => {
     setIsFrontCamera(prev => !prev);
   };
 
+  const retryCamera = () => {
+    setError(null);
+    // Re-trigger the camera initialization by toggling isFrontCamera
+    const currentCamera = isFrontCamera;
+    setIsFrontCamera(!currentCamera);
+    setTimeout(() => setIsFrontCamera(currentCamera), 100);
+  };
+
   return (
     <div className="relative flex flex-col items-center">
       <div className="relative w-full aspect-[4/3] bg-black overflow-hidden rounded-lg">
-        {cameraActive ? (
+        {error ? (
+          <div className="flex flex-col items-center justify-center w-full h-full bg-gray-900 text-white p-4">
+            <AlertTriangle size={32} className="text-cafri-red mb-2" />
+            <p className="text-center mb-4">{error}</p>
+            <Button onClick={retryCamera} variant="default">
+              Retry Camera Access
+            </Button>
+          </div>
+        ) : cameraActive ? (
           <video
             ref={videoRef}
             autoPlay
@@ -162,7 +188,7 @@ const CameraCapture: React.FC = () => {
       <div className="absolute bottom-4 left-0 right-0 flex justify-center items-center space-x-6">
         <button
           onClick={toggleCamera}
-          disabled={isCapturing}
+          disabled={isCapturing || !!error}
           className="bg-white p-3 rounded-full shadow-lg disabled:opacity-50"
           aria-label="Switch camera"
         >
@@ -175,7 +201,7 @@ const CameraCapture: React.FC = () => {
 
         <button
           onClick={captureImage}
-          disabled={!cameraActive || isCapturing}
+          disabled={!cameraActive || isCapturing || !!error}
           className="bg-cafri-purple p-5 rounded-full shadow-lg disabled:opacity-50"
           aria-label="Take photo"
         >
