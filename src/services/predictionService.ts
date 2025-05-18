@@ -1,7 +1,7 @@
 
 import { DiagnosisResult } from '@/types';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://api.cafri-crop-doctor.com';
+const API_URL = import.meta.env.VITE_API_URL || 'https://cropdoctor.loca.lt';
 
 export async function uploadImageForPrediction(imageData: string): Promise<DiagnosisResult> {
   try {
