@@ -2,5 +2,17 @@
 {
   "appId": "com.cafri.cropscan",
   "appName": "CAFRI Crop Doctor",
-  "webDir": "dist"
+  "webDir": "dist",
+  "plugins": {
+    "Camera": {
+      "android": {
+        "permissions": [
+          "android.permission.CAMERA"
+        ]
+      }
+    },
+    "Permissions": {
+      "camera": true
+    }
+  }
 }

@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import { Camera, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -8,8 +7,13 @@ import { DiagnosisResult } from '@/types';
 import { toast } from '@/components/ui/sonner';
 import { uploadImageForPrediction } from '@/services/predictionService';
 import { Button } from '@/components/ui/button';
+import { Capacitor } from '@capacitor/core';
 
-const CameraCapture: React.FC = () => {
+interface CameraCaptureProps {
+  requestCameraPermission?: () => Promise<void>;
+}
+
+const CameraCapture: React.FC<CameraCaptureProps> = ({ requestCameraPermission }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [cameraActive, setCameraActive] = useState(false);
@@ -45,9 +49,25 @@ const CameraCapture: React.FC = () => {
         }
       } catch (err) {
         console.error('Error accessing camera:', err);
-        toast.error('Could not access camera. Please check permissions.');
+        
+        // Try to differentiate between permission errors and other camera issues
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        
+        if (errorMessage.toLowerCase().includes('permission') || 
+            errorMessage.toLowerCase().includes('denied') ||
+            errorMessage.toLowerCase().includes('not allowed')) {
+          setError('Camera permission denied. Please grant camera permissions in your device settings.');
+          
+          // If we have a permission request function and we're on a native platform, offer to request permission
+          if (requestCameraPermission && Capacitor.isNativePlatform()) {
+            toast.error('Camera permission denied. Please grant camera permissions.');
+          }
+        } else {
+          setError('Could not access camera. Please check your device and try again.');
+          toast.error('Could not access camera. Please check your device.');
+        }
+        
         setCameraActive(false);
-        setError('Camera access denied. Please check permissions.');
       }
     };
 
@@ -59,7 +79,7 @@ const CameraCapture: React.FC = () => {
       }
       setCameraActive(false);
     };
-  }, [isFrontCamera]);
+  }, [isFrontCamera, requestCameraPermission]);
 
   const captureImage = async () => {
     if (!videoRef.current || !canvasRef.current || isCapturing) return;
@@ -150,8 +170,14 @@ const CameraCapture: React.FC = () => {
     setIsFrontCamera(prev => !prev);
   };
 
-  const retryCamera = () => {
+  const retryCamera = async () => {
     setError(null);
+    
+    // If permission request function available and we're on native platform, try requesting permissions
+    if (requestCameraPermission && Capacitor.isNativePlatform() && !cameraActive) {
+      await requestCameraPermission();
+    }
+    
     // Re-trigger the camera initialization by toggling isFrontCamera
     const currentCamera = isFrontCamera;
     setIsFrontCamera(!currentCamera);
@@ -163,10 +189,12 @@ const CameraCapture: React.FC = () => {
       <div className="relative w-full aspect-[4/3] bg-black overflow-hidden rounded-lg">
         {error ? (
           <div className="flex flex-col items-center justify-center w-full h-full bg-gray-900 text-white p-4">
-            <AlertTriangle size={32} className="text-cafri-red mb-2" />
+            <AlertTriangle size={32} className="text-red-500 mb-2" />
             <p className="text-center mb-4">{error}</p>
             <Button onClick={retryCamera} variant="default">
-              Retry Camera Access
+              {requestCameraPermission && Capacitor.isNativePlatform() 
+                ? "Request Permission" 
+                : "Retry Camera Access"}
             </Button>
           </div>
         ) : cameraActive ? (
