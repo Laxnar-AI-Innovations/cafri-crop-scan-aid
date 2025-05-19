@@ -4,6 +4,9 @@
   "appName": "CAFRI Crop Doctor",
   "webDir": "dist",
   "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000
+    },
     "Camera": {
       "android": {
         "permissions": [
@@ -15,13 +18,7 @@
       }
     },
     "Permissions": {
-      "camera": true,
-      "android": {
-        "camera": true
-      },
-      "ios": {
-        "camera": true
-      }
+      "permissions": ["camera"]
     }
   },
   "server": {

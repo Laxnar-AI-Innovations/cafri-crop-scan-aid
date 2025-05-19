@@ -5,12 +5,16 @@ import Header from '@/components/Header';
 import { useAppContext } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
 import { Capacitor } from '@capacitor/core';
-import { Camera, PermissionStatus } from '@capacitor/camera';
+import { Camera } from '@capacitor/camera';
+
+// Define types explicitly to match import
+type CameraPermissionState = 'prompt' | 'prompt-with-rationale' | 'granted' | 'denied';
 
 const CameraScreen: React.FC = () => {
   const { isOnline } = useAppContext();
   const [cameraPermission, setCameraPermission] = useState<boolean | null>(null);
   const [permissionChecked, setPermissionChecked] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   useEffect(() => {
     console.log('CameraScreen mounted');
@@ -23,24 +27,30 @@ const CameraScreen: React.FC = () => {
       console.log('Checking camera permissions...');
       
       if (Capacitor.isNativePlatform()) {
+        console.log('Running on native platform, checking camera permission');
         const permissionStatus = await Camera.checkPermissions();
         console.log('Permission status:', permissionStatus);
         
-        setCameraPermission(permissionStatus.camera === 'granted');
-        setPermissionChecked(true);
+        // Store the permission state
+        const hasPermission = permissionStatus.camera === 'granted';
+        console.log('Has camera permission:', hasPermission);
+        setCameraPermission(hasPermission);
         
         // If permission is not granted, request it immediately
-        if (permissionStatus.camera !== 'granted') {
+        if (!hasPermission) {
+          console.log('Permission not granted, requesting...');
           await requestPermissions();
         }
       } else {
-        // In web, we'll check permissions when accessing the camera
+        // In web, we'll handle permissions when accessing the camera
         console.log('Running in web, setting permission to true');
         setCameraPermission(true);
-        setPermissionChecked(true);
       }
+      
+      setPermissionChecked(true);
     } catch (error) {
       console.error('Error checking camera permissions:', error);
+      setErrorMessage('Failed to check camera permissions. Please restart the app.');
       setCameraPermission(false);
       setPermissionChecked(true);
     }
@@ -52,16 +62,24 @@ const CameraScreen: React.FC = () => {
       const permissionStatus = await Camera.requestPermissions();
       console.log('Permission status after request:', permissionStatus);
       
-      setCameraPermission(permissionStatus.camera === 'granted');
+      const hasPermission = permissionStatus.camera === 'granted';
+      setCameraPermission(hasPermission);
+      
+      if (!hasPermission) {
+        setErrorMessage('Camera permission denied. Please enable it in your device settings.');
+      } else {
+        setErrorMessage(null);
+      }
     } catch (error) {
       console.error('Error requesting camera permissions:', error);
+      setErrorMessage('Failed to request camera permissions.');
       setCameraPermission(false);
     } finally {
       setPermissionChecked(true);
     }
   };
 
-  console.log('Current permission state:', { cameraPermission, permissionChecked });
+  console.log('Current permission state:', { cameraPermission, permissionChecked, errorMessage });
 
   // Render permission screen if permission is explicitly denied
   if (permissionChecked && cameraPermission === false) {
@@ -75,7 +93,7 @@ const CameraScreen: React.FC = () => {
           <div className="text-center mb-6">
             <h2 className="text-xl font-bold mb-2">Camera Permission Required</h2>
             <p className="text-gray-600 mb-4">
-              This app needs camera access to identify crop diseases. Please grant camera permission.
+              {errorMessage || 'This app needs camera access to identify crop diseases. Please grant camera permission.'}
             </p>
           </div>
           <Button onClick={requestPermissions} className="bg-cafri-purple">

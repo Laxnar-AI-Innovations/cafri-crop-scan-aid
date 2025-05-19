@@ -1,16 +1,38 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const SplashScreen: React.FC = () => {
   const navigate = useNavigate();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      navigate('/home');
-    }, 2000);
-
-    return () => clearTimeout(timer);
+    console.log('SplashScreen mounted');
+    
+    const loadApp = async () => {
+      try {
+        // Simulate initialization process
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        console.log('SplashScreen: Navigating to home screen');
+        navigate('/home', { replace: true });
+      } catch (err) {
+        console.error('SplashScreen error:', err);
+        setError('Failed to initialize app. Please restart.');
+      }
+    };
+    
+    loadApp();
+    
+    // Fallback in case navigation doesn't work
+    const fallbackTimer = setTimeout(() => {
+      console.log('SplashScreen: Fallback navigation triggered');
+      navigate('/home', { replace: true });
+    }, 5000);
+    
+    return () => {
+      console.log('SplashScreen unmounting');
+      clearTimeout(fallbackTimer);
+    };
   }, [navigate]);
 
   return (
@@ -28,6 +50,12 @@ const SplashScreen: React.FC = () => {
       </div>
       <h1 className="text-3xl font-bold text-white mb-3">CAFRI</h1>
       <h2 className="text-2xl font-semibold text-white">Crop Doctor</h2>
+      
+      {error && (
+        <div className="mt-8 bg-red-500/20 border border-red-500 rounded-md p-3">
+          <p className="text-white">{error}</p>
+        </div>
+      )}
       
       <div className="absolute bottom-8 flex flex-col items-center">
         <p className="text-white text-sm mb-2">Instant Disease Diagnosis</p>
