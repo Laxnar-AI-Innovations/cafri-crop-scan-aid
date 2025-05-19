@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import { Camera as CameraIcon, AlertTriangle, CameraOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -38,9 +37,8 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ requestCameraPermission }
           console.log('Attempting to access webcam...');
           const constraints = {
             video: { 
-              facingMode: isFrontCamera ? 'user' : 'environment',
-              width: { ideal: 1024 },
-              height: { ideal: 768 }
+              facingMode: isFrontCamera ? 'user' : 'environment'
+              // Removing width & height constraints to allow more flexible resolution
             },
             audio: false
           };
@@ -50,15 +48,19 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ requestCameraPermission }
           
           console.log('Webcam access successful, setting video source');
           videoRef.current.srcObject = stream;
+          setCameraActive(true); // Set camera active as soon as we get a stream
+
           videoRef.current.onloadedmetadata = () => {
             console.log('Video metadata loaded');
             if (videoRef.current) {
-              videoRef.current.play().then(() => {
-                console.log('Video playback started');
-                setCameraActive(true);
-              }).catch(e => {
-                console.error('Video playback failed:', e);
-              });
+              videoRef.current.play()
+                .then(() => {
+                  console.log('Video playback started successfully');
+                })
+                .catch(e => {
+                  console.error('Video playback failed:', e);
+                  setError('Failed to start video playback.');
+                });
             }
           };
           setError(null);
@@ -94,6 +96,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ requestCameraPermission }
       }
     };
 
+    console.log('Starting camera initialization...');
     startCamera();
 
     return () => {
@@ -245,7 +248,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ requestCameraPermission }
       <div className="absolute bottom-4 left-0 right-0 flex justify-center items-center space-x-6">
         <button
           onClick={toggleCamera}
-          disabled={isCapturing || !!error || !cameraActive}
+          disabled={!cameraActive || isCapturing}
           className="bg-white p-3 rounded-full shadow-lg disabled:opacity-50"
           aria-label="Switch camera"
         >
@@ -258,8 +261,8 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ requestCameraPermission }
 
         <button
           onClick={captureImage}
-          disabled={!cameraActive || isCapturing || !!error}
-          className="bg-cafri-purple p-5 rounded-full shadow-lg disabled:opacity-50"
+          disabled={!cameraActive || isCapturing}
+          className={`bg-cafri-purple p-5 rounded-full shadow-lg ${!cameraActive ? 'opacity-50' : ''}`}
           aria-label="Take photo"
         >
           <CameraIcon size={32} className="text-white" />

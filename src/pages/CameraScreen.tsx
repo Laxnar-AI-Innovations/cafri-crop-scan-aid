@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import CameraCapture from '@/components/CameraCapture';
 import Header from '@/components/Header';
@@ -26,32 +25,39 @@ const CameraScreen: React.FC = () => {
     try {
       console.log('Checking camera permissions...');
       
-      if (Capacitor.isNativePlatform()) {
-        console.log('Running on native platform, checking camera permission');
-        const permissionStatus = await Camera.checkPermissions();
-        console.log('Permission status:', permissionStatus);
-        
-        // Store the permission state
-        const hasPermission = permissionStatus.camera === 'granted';
-        console.log('Has camera permission:', hasPermission);
-        setCameraPermission(hasPermission);
-        
-        // If permission is not granted, request it immediately
-        if (!hasPermission) {
-          console.log('Permission not granted, requesting...');
-          await requestPermissions();
-        }
-      } else {
-        // In web, we'll handle permissions when accessing the camera
-        console.log('Running in web, setting permission to true');
+      // For web preview on computer, we can skip native checks and set to true
+      if (!Capacitor.isNativePlatform()) {
+        console.log('Running in web, setting permission to true by default');
         setCameraPermission(true);
+        setPermissionChecked(true);
+        return;
+      }
+      
+      // Only do native permission checks on actual mobile device
+      const permissionStatus = await Camera.checkPermissions();
+      console.log('Permission status:', permissionStatus);
+      
+      // Store the permission state
+      const hasPermission = permissionStatus.camera === 'granted';
+      console.log('Has camera permission:', hasPermission);
+      setCameraPermission(hasPermission);
+      
+      // If permission is not granted, request it immediately
+      if (!hasPermission) {
+        console.log('Permission not granted, requesting...');
+        await requestPermissions();
       }
       
       setPermissionChecked(true);
     } catch (error) {
       console.error('Error checking camera permissions:', error);
-      setErrorMessage('Failed to check camera permissions. Please restart the app.');
-      setCameraPermission(false);
+      // In case of error in permission checking, default to true for web preview
+      if (!Capacitor.isNativePlatform()) {
+        setCameraPermission(true);
+      } else {
+        setErrorMessage('Failed to check camera permissions. Please restart the app.');
+        setCameraPermission(false);
+      }
       setPermissionChecked(true);
     }
   };
@@ -59,6 +65,14 @@ const CameraScreen: React.FC = () => {
   const requestPermissions = async () => {
     try {
       console.log('Requesting camera permissions...');
+      
+      if (!Capacitor.isNativePlatform()) {
+        // For web, we'll just set to true and let browser handle permission request
+        setCameraPermission(true);
+        setPermissionChecked(true);
+        return;
+      }
+      
       const permissionStatus = await Camera.requestPermissions();
       console.log('Permission status after request:', permissionStatus);
       
@@ -72,8 +86,13 @@ const CameraScreen: React.FC = () => {
       }
     } catch (error) {
       console.error('Error requesting camera permissions:', error);
-      setErrorMessage('Failed to request camera permissions.');
-      setCameraPermission(false);
+      // In case of error, default to true for web preview
+      if (!Capacitor.isNativePlatform()) {
+        setCameraPermission(true);
+      } else {
+        setErrorMessage('Failed to request camera permissions.');
+        setCameraPermission(false);
+      }
     } finally {
       setPermissionChecked(true);
     }
@@ -81,7 +100,44 @@ const CameraScreen: React.FC = () => {
 
   console.log('Current permission state:', { cameraPermission, permissionChecked, errorMessage });
 
-  // Render permission screen if permission is explicitly denied
+  // For web preview, we'll skip the permission screen and go straight to camera
+  if (!Capacitor.isNativePlatform()) {
+    return (
+      <div className="flex flex-col h-full">
+        <Header 
+          title={{ en: "Take Photo", hi: "फोटो लें" }}
+          showBack={true} 
+        />
+        
+        <div className="flex-1 flex flex-col p-4">
+          {!isOnline && (
+            <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <p className="text-sm text-amber-800">
+                You are offline. Photos will be queued for analysis when you're back online.
+              </p>
+            </div>
+          )}
+          
+          <div className="flex-1 flex flex-col">
+            <CameraCapture requestCameraPermission={requestPermissions} />
+            
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+              <h3 className="text-sm font-semibold mb-2">Tips for best results:</h3>
+              <ul className="text-sm text-gray-600 list-disc pl-5 space-y-1">
+                <li>Ensure good lighting</li>
+                <li>Focus on affected areas</li>
+                <li>Include both healthy and affected parts</li>
+                <li>Keep the camera steady</li>
+                <li>Images are analyzed using AI for disease detection</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  // Render permission screen if permission is explicitly denied (mobile only)
   if (permissionChecked && cameraPermission === false) {
     return (
       <div className="flex flex-col h-full">
@@ -104,7 +160,7 @@ const CameraScreen: React.FC = () => {
     );
   }
   
-  // Show loading state while checking permissions
+  // Show loading state while checking permissions (mobile only)
   if (!permissionChecked || cameraPermission === null) {
     return (
       <div className="flex flex-col h-full">
@@ -120,6 +176,7 @@ const CameraScreen: React.FC = () => {
     );
   }
   
+  // Regular mobile view with permissions granted
   return (
     <div className="flex flex-col h-full">
       <Header 
