@@ -1,9 +1,9 @@
+
 import React, { useRef, useState, useEffect } from 'react';
-import { Camera, AlertTriangle } from 'lucide-react';
+import { Camera as CameraIcon, AlertTriangle, CameraOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import { useAppContext } from '@/contexts/AppContext';
-import { DiagnosisResult } from '@/types';
 import { toast } from '@/components/ui/sonner';
 import { uploadImageForPrediction } from '@/services/predictionService';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ requestCameraPermission }
   const [error, setError] = useState<string | null>(null);
   const { isOnline, addDiagnosis, addPendingImage } = useAppContext();
   const navigate = useNavigate();
+  const [cameraInitAttempts, setCameraInitAttempts] = useState(0);
 
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -42,7 +43,10 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ requestCameraPermission }
             audio: false
           };
 
+          console.log('Attempting to access camera with constraints:', constraints);
           stream = await navigator.mediaDevices.getUserMedia(constraints);
+          
+          console.log('Camera access successful');
           videoRef.current.srcObject = stream;
           setCameraActive(true);
           setError(null);
@@ -52,19 +56,26 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ requestCameraPermission }
         
         // Try to differentiate between permission errors and other camera issues
         const errorMessage = err instanceof Error ? err.message : String(err);
+        console.log('Camera error message:', errorMessage);
         
         if (errorMessage.toLowerCase().includes('permission') || 
             errorMessage.toLowerCase().includes('denied') ||
             errorMessage.toLowerCase().includes('not allowed')) {
           setError('Camera permission denied. Please grant camera permissions in your device settings.');
           
-          // If we have a permission request function and we're on a native platform, offer to request permission
-          if (requestCameraPermission && Capacitor.isNativePlatform()) {
-            toast.error('Camera permission denied. Please grant camera permissions.');
+          // If we have a permission request function, offer to request permission
+          if (requestCameraPermission) {
+            console.log('Requesting camera permission from CameraCapture component');
+            try {
+              await requestCameraPermission();
+              // After requesting permission, increment attempts to trigger useEffect again
+              setCameraInitAttempts(prev => prev + 1);
+            } catch (permError) {
+              console.error('Error requesting permission:', permError);
+            }
           }
         } else {
           setError('Could not access camera. Please check your device and try again.');
-          toast.error('Could not access camera. Please check your device.');
         }
         
         setCameraActive(false);
@@ -79,7 +90,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ requestCameraPermission }
       }
       setCameraActive(false);
     };
-  }, [isFrontCamera, requestCameraPermission]);
+  }, [isFrontCamera, requestCameraPermission, cameraInitAttempts]);
 
   const captureImage = async () => {
     if (!videoRef.current || !canvasRef.current || isCapturing) return;
@@ -173,15 +184,18 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ requestCameraPermission }
   const retryCamera = async () => {
     setError(null);
     
-    // If permission request function available and we're on native platform, try requesting permissions
-    if (requestCameraPermission && Capacitor.isNativePlatform() && !cameraActive) {
-      await requestCameraPermission();
+    // If permission request function available, try requesting permissions
+    if (requestCameraPermission) {
+      try {
+        console.log('Requesting camera permission on retry');
+        await requestCameraPermission();
+      } catch (err) {
+        console.error('Error requesting permission on retry:', err);
+      }
     }
     
-    // Re-trigger the camera initialization by toggling isFrontCamera
-    const currentCamera = isFrontCamera;
-    setIsFrontCamera(!currentCamera);
-    setTimeout(() => setIsFrontCamera(currentCamera), 100);
+    // Increment the attempt counter to trigger the useEffect again
+    setCameraInitAttempts(prev => prev + 1);
   };
 
   return (
@@ -189,12 +203,10 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ requestCameraPermission }
       <div className="relative w-full aspect-[4/3] bg-black overflow-hidden rounded-lg">
         {error ? (
           <div className="flex flex-col items-center justify-center w-full h-full bg-gray-900 text-white p-4">
-            <AlertTriangle size={32} className="text-red-500 mb-2" />
+            <CameraOff size={32} className="text-red-500 mb-2" />
             <p className="text-center mb-4">{error}</p>
             <Button onClick={retryCamera} variant="default">
-              {requestCameraPermission && Capacitor.isNativePlatform() 
-                ? "Request Permission" 
-                : "Retry Camera Access"}
+              Retry Camera Access
             </Button>
           </div>
         ) : cameraActive ? (
@@ -207,7 +219,8 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ requestCameraPermission }
           />
         ) : (
           <div className="flex items-center justify-center w-full h-full bg-gray-900">
-            <p className="text-white">Loading camera...</p>
+            <div className="w-8 h-8 border-4 border-gray-300 rounded-full border-t-white animate-spin mb-2"></div>
+            <p className="text-white mt-4">Loading camera...</p>
           </div>
         )}
         <canvas ref={canvasRef} className="hidden" />
@@ -216,7 +229,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ requestCameraPermission }
       <div className="absolute bottom-4 left-0 right-0 flex justify-center items-center space-x-6">
         <button
           onClick={toggleCamera}
-          disabled={isCapturing || !!error}
+          disabled={isCapturing || !!error || !cameraActive}
           className="bg-white p-3 rounded-full shadow-lg disabled:opacity-50"
           aria-label="Switch camera"
         >
@@ -233,7 +246,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ requestCameraPermission }
           className="bg-cafri-purple p-5 rounded-full shadow-lg disabled:opacity-50"
           aria-label="Take photo"
         >
-          <Camera size={32} className="text-white" />
+          <CameraIcon size={32} className="text-white" />
         </button>
 
         <div className="w-12"></div> {/* Placeholder for balance */}

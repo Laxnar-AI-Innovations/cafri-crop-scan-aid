@@ -9,11 +9,17 @@
         "permissions": [
           "android.permission.CAMERA"
         ]
+      },
+      "ios": {
+        "NSCameraUsageDescription": "App needs camera access to identify crop diseases"
       }
     },
     "Permissions": {
       "camera": true,
       "android": {
+        "camera": true
+      },
+      "ios": {
         "camera": true
       }
     }

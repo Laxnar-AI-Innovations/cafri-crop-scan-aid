@@ -1,46 +1,38 @@
+
 import React, { useEffect, useState } from 'react';
 import CameraCapture from '@/components/CameraCapture';
 import Header from '@/components/Header';
 import { useAppContext } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
 import { Capacitor } from '@capacitor/core';
+import { Camera } from '@capacitor/camera';
 
-// Import the Camera type without redefining existing types
-declare module '@capacitor/camera' {
-  export interface CameraPlugin {
-    checkPermissions(): Promise<PermissionStatus>;
-    requestPermissions(): Promise<PermissionStatus>;
-  }
-  
-  // Use the proper type without redefining 'camera' property
-  export interface PermissionStatus {
-    // We're not redefining the camera property here
-  }
-  
-  export type PermissionState = 'prompt' | 'prompt-with-rationale' | 'granted' | 'denied';
-}
+// Define types that won't conflict with existing types
+type CameraPermissionState = 'prompt' | 'prompt-with-rationale' | 'granted' | 'denied';
 
 const CameraScreen: React.FC = () => {
   const { isOnline } = useAppContext();
   const [cameraPermission, setCameraPermission] = useState<boolean | null>(null);
   
   useEffect(() => {
-    if (Capacitor.isNativePlatform()) {
-      // Check camera permissions on native platforms
-      checkCameraPermissions();
-    } else {
-      // In web, we'll check permissions when accessing the camera
-      setCameraPermission(true);
-    }
+    // Check permissions when component mounts
+    checkCameraPermissions();
   }, []);
 
   const checkCameraPermissions = async () => {
     try {
-      // Dynamically import the permission plugin (only needed on native)
-      const Camera = await import('@capacitor/camera').then(module => module.Camera);
-      const permissionStatus = await Camera.checkPermissions();
-      
-      setCameraPermission(permissionStatus.camera === 'granted');
+      if (Capacitor.isNativePlatform()) {
+        const permissionStatus = await Camera.checkPermissions();
+        setCameraPermission(permissionStatus.camera === 'granted');
+        
+        // If permission is not granted, request it immediately
+        if (permissionStatus.camera !== 'granted') {
+          await requestPermissions();
+        }
+      } else {
+        // In web, we'll check permissions when accessing the camera
+        setCameraPermission(true);
+      }
     } catch (error) {
       console.error('Error checking camera permissions:', error);
       setCameraPermission(false);
@@ -49,12 +41,14 @@ const CameraScreen: React.FC = () => {
 
   const requestPermissions = async () => {
     try {
-      const Camera = await import('@capacitor/camera').then(module => module.Camera);
+      console.log('Requesting camera permissions...');
       const permissionStatus = await Camera.requestPermissions();
+      console.log('Permission status:', permissionStatus);
       
       setCameraPermission(permissionStatus.camera === 'granted');
     } catch (error) {
       console.error('Error requesting camera permissions:', error);
+      setCameraPermission(false);
     }
   };
 
@@ -76,6 +70,22 @@ const CameraScreen: React.FC = () => {
           <Button onClick={requestPermissions} className="bg-cafri-purple">
             Grant Camera Permission
           </Button>
+        </div>
+      </div>
+    );
+  }
+  
+  // Show loading state while checking permissions
+  if (cameraPermission === null) {
+    return (
+      <div className="flex flex-col h-full">
+        <Header 
+          title={{ en: "Loading Camera", hi: "कैमरा लोड हो रहा है" }}
+          showBack={true} 
+        />
+        <div className="flex-1 flex flex-col items-center justify-center p-4">
+          <div className="w-8 h-8 border-4 border-cafri-purple-light rounded-full border-t-cafri-purple animate-spin mb-4"></div>
+          <p>Checking camera permissions...</p>
         </div>
       </div>
     );
