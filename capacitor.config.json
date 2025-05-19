@@ -3,9 +3,17 @@
   "appId": "com.cafri.cropscan",
   "appName": "CAFRI Crop Doctor",
   "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "url": "https://6ec3c1c2-8902-4450-822b-924c20f4d474.lovableproject.com?forceHideBadge=true",
+    "cleartext": true
+  },
   "plugins": {
     "SplashScreen": {
-      "launchShowDuration": 2000
+      "launchShowDuration": 2000,
+      "launchAutoHide": true,
+      "backgroundColor": "#9b87f5",
+      "androidSplashResourceName": "splash"
     },
     "Camera": {
       "android": {
@@ -20,8 +28,5 @@
     "Permissions": {
       "permissions": ["camera"]
     }
-  },
-  "server": {
-    "cleartext": true
   }
 }

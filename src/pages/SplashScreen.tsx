@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 
 const SplashScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -8,6 +9,7 @@ const SplashScreen: React.FC = () => {
 
   useEffect(() => {
     console.log('SplashScreen mounted');
+    console.log('Capacitor platform:', Capacitor.getPlatform());
     
     const loadApp = async () => {
       try {

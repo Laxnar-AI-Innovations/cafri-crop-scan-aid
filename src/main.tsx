@@ -3,9 +3,11 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 import { BrowserRouter } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 
 // Log when the main script runs
 console.log('Main script running');
+console.log('Capacitor platform:', Capacitor.getPlatform());
 
 const renderApp = () => {
   const rootElement = document.getElementById('root');

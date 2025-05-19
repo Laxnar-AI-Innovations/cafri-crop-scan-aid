@@ -25,6 +25,7 @@ export default defineConfig(({ mode }) => ({
       external: [
         '@capacitor/camera',
         '@capacitor/core',
+        '@capacitor/splash-screen'
       ]
     }
   }
