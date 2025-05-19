@@ -5,25 +5,29 @@ import Header from '@/components/Header';
 import { useAppContext } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
 import { Capacitor } from '@capacitor/core';
-import { Camera } from '@capacitor/camera';
-
-// Define types that won't conflict with existing types
-type CameraPermissionState = 'prompt' | 'prompt-with-rationale' | 'granted' | 'denied';
+import { Camera, PermissionStatus } from '@capacitor/camera';
 
 const CameraScreen: React.FC = () => {
   const { isOnline } = useAppContext();
   const [cameraPermission, setCameraPermission] = useState<boolean | null>(null);
+  const [permissionChecked, setPermissionChecked] = useState(false);
   
   useEffect(() => {
+    console.log('CameraScreen mounted');
     // Check permissions when component mounts
     checkCameraPermissions();
   }, []);
 
   const checkCameraPermissions = async () => {
     try {
+      console.log('Checking camera permissions...');
+      
       if (Capacitor.isNativePlatform()) {
         const permissionStatus = await Camera.checkPermissions();
+        console.log('Permission status:', permissionStatus);
+        
         setCameraPermission(permissionStatus.camera === 'granted');
+        setPermissionChecked(true);
         
         // If permission is not granted, request it immediately
         if (permissionStatus.camera !== 'granted') {
@@ -31,11 +35,14 @@ const CameraScreen: React.FC = () => {
         }
       } else {
         // In web, we'll check permissions when accessing the camera
+        console.log('Running in web, setting permission to true');
         setCameraPermission(true);
+        setPermissionChecked(true);
       }
     } catch (error) {
       console.error('Error checking camera permissions:', error);
       setCameraPermission(false);
+      setPermissionChecked(true);
     }
   };
 
@@ -43,17 +50,21 @@ const CameraScreen: React.FC = () => {
     try {
       console.log('Requesting camera permissions...');
       const permissionStatus = await Camera.requestPermissions();
-      console.log('Permission status:', permissionStatus);
+      console.log('Permission status after request:', permissionStatus);
       
       setCameraPermission(permissionStatus.camera === 'granted');
     } catch (error) {
       console.error('Error requesting camera permissions:', error);
       setCameraPermission(false);
+    } finally {
+      setPermissionChecked(true);
     }
   };
 
+  console.log('Current permission state:', { cameraPermission, permissionChecked });
+
   // Render permission screen if permission is explicitly denied
-  if (cameraPermission === false) {
+  if (permissionChecked && cameraPermission === false) {
     return (
       <div className="flex flex-col h-full">
         <Header 
@@ -76,7 +87,7 @@ const CameraScreen: React.FC = () => {
   }
   
   // Show loading state while checking permissions
-  if (cameraPermission === null) {
+  if (!permissionChecked || cameraPermission === null) {
     return (
       <div className="flex flex-col h-full">
         <Header 
