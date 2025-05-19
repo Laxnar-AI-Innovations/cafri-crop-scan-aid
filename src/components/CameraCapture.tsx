@@ -25,6 +25,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ requestCameraPermission }
   const [cameraInitAttempts, setCameraInitAttempts] = useState(0);
 
   useEffect(() => {
+    console.log('CameraCapture component mounted');
     let stream: MediaStream | null = null;
 
     const startCamera = async () => {
@@ -34,6 +35,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ requestCameraPermission }
             stream.getTracks().forEach(track => track.stop());
           }
 
+          console.log('Attempting to access webcam...');
           const constraints = {
             video: { 
               facingMode: isFrontCamera ? 'user' : 'environment',
@@ -43,16 +45,26 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ requestCameraPermission }
             audio: false
           };
 
-          console.log('Attempting to access camera with constraints:', constraints);
+          console.log('Webcam constraints:', constraints);
           stream = await navigator.mediaDevices.getUserMedia(constraints);
           
-          console.log('Camera access successful');
+          console.log('Webcam access successful, setting video source');
           videoRef.current.srcObject = stream;
-          setCameraActive(true);
+          videoRef.current.onloadedmetadata = () => {
+            console.log('Video metadata loaded');
+            if (videoRef.current) {
+              videoRef.current.play().then(() => {
+                console.log('Video playback started');
+                setCameraActive(true);
+              }).catch(e => {
+                console.error('Video playback failed:', e);
+              });
+            }
+          };
           setError(null);
         }
       } catch (err) {
-        console.error('Error accessing camera:', err);
+        console.error('Error accessing webcam:', err);
         
         // Try to differentiate between permission errors and other camera issues
         const errorMessage = err instanceof Error ? err.message : String(err);
@@ -61,7 +73,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ requestCameraPermission }
         if (errorMessage.toLowerCase().includes('permission') || 
             errorMessage.toLowerCase().includes('denied') ||
             errorMessage.toLowerCase().includes('not allowed')) {
-          setError('Camera permission denied. Please grant camera permissions in your device settings.');
+          setError('Camera permission denied. Please grant camera permissions in your browser settings.');
           
           // If we have a permission request function, offer to request permission
           if (requestCameraPermission) {
@@ -85,8 +97,12 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ requestCameraPermission }
     startCamera();
 
     return () => {
+      console.log('CameraCapture component unmounting, stopping camera');
       if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach(track => {
+          console.log('Stopping track:', track.kind);
+          track.stop();
+        });
       }
       setCameraActive(false);
     };
@@ -218,7 +234,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ requestCameraPermission }
             className="absolute inset-0 w-full h-full object-cover"
           />
         ) : (
-          <div className="flex items-center justify-center w-full h-full bg-gray-900">
+          <div className="flex flex-col items-center justify-center w-full h-full bg-gray-900">
             <div className="w-8 h-8 border-4 border-gray-300 rounded-full border-t-white animate-spin mb-2"></div>
             <p className="text-white mt-4">Loading camera...</p>
           </div>
