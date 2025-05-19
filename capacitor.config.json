@@ -12,7 +12,13 @@
       }
     },
     "Permissions": {
-      "camera": true
+      "camera": true,
+      "android": {
+        "camera": true
+      }
     }
+  },
+  "server": {
+    "cleartext": true
   }
 }

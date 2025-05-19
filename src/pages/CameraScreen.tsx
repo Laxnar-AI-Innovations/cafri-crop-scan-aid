@@ -6,6 +6,20 @@ import { useAppContext } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
 import { Capacitor } from '@capacitor/core';
 
+// Import the Camera type for TypeScript support without causing build issues
+declare module '@capacitor/camera' {
+  export interface CameraPlugin {
+    checkPermissions(): Promise<PermissionStatus>;
+    requestPermissions(): Promise<PermissionStatus>;
+  }
+  
+  export interface PermissionStatus {
+    camera: PermissionState;
+  }
+  
+  export type PermissionState = 'prompt' | 'prompt-with-rationale' | 'granted' | 'denied';
+}
+
 const CameraScreen: React.FC = () => {
   const { isOnline } = useAppContext();
   const [cameraPermission, setCameraPermission] = useState<boolean | null>(null);
@@ -23,7 +37,7 @@ const CameraScreen: React.FC = () => {
   const checkCameraPermissions = async () => {
     try {
       // Dynamically import the permission plugin (only needed on native)
-      const { Camera } = await import('@capacitor/camera');
+      const Camera = await import('@capacitor/camera').then(module => module.Camera);
       const permissionStatus = await Camera.checkPermissions();
       
       setCameraPermission(permissionStatus.camera === 'granted');
@@ -35,7 +49,7 @@ const CameraScreen: React.FC = () => {
 
   const requestPermissions = async () => {
     try {
-      const { Camera } = await import('@capacitor/camera');
+      const Camera = await import('@capacitor/camera').then(module => module.Camera);
       const permissionStatus = await Camera.requestPermissions();
       
       setCameraPermission(permissionStatus.camera === 'granted');
