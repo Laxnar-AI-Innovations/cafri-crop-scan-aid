@@ -45,11 +45,6 @@ const App = () => {
     initializeApp();
   }, []);
 
-  // If app is not yet initialized, show nothing (the splash screen will handle this)
-  if (!isInitialized) {
-    return null;
-  }
-
   return (
     <QueryClientProvider client={queryClient}>
       <AppProvider>
