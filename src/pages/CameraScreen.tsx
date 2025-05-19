@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import CameraCapture from '@/components/CameraCapture';
 import Header from '@/components/Header';
@@ -6,15 +5,16 @@ import { useAppContext } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
 import { Capacitor } from '@capacitor/core';
 
-// Import the Camera type for TypeScript support without causing build issues
+// Import the Camera type without redefining existing types
 declare module '@capacitor/camera' {
   export interface CameraPlugin {
     checkPermissions(): Promise<PermissionStatus>;
     requestPermissions(): Promise<PermissionStatus>;
   }
   
+  // Use the proper type without redefining 'camera' property
   export interface PermissionStatus {
-    camera: PermissionState;
+    // We're not redefining the camera property here
   }
   
   export type PermissionState = 'prompt' | 'prompt-with-rationale' | 'granted' | 'denied';
